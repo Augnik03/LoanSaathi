@@ -1,27 +1,33 @@
-"use client"
+"use client";
 
-import { useState, useRef } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Camera, Mic, MicOff, Video, VideoOff, FileText, User } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
-import RecordRTC from "recordrtc"
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Camera, Mic, MicOff, Video, VideoOff, FileText, User } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import RecordRTC from "recordrtc";
 
 export default function VideoInteraction() {
-  const router = useRouter()
-  const [step, setStep] = useState(1)
-  const [isRecording, setIsRecording] = useState(false)
-  const [videoUrl, setVideoUrl] = useState<string | null>(null)
-  const [cameraEnabled, setCameraEnabled] = useState(true)
-  const [micEnabled, setMicEnabled] = useState(true)
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [transcript, setTranscript] = useState("")
-  const [isProcessing, setIsProcessing] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const recorderRef = useRef<RecordRTC | null>(null)
-  const recognitionRef = useRef<any>(null)
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [isRecording, setIsRecording] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(true);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [transcript, setTranscript] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const recorderRef = useRef<RecordRTC | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // State for extracted OCR data
+  const [aadhaarName, setAadhaarName] = useState("");
+  const [aadhaarNumber, setAadhaarNumber] = useState("");
+  const [panNumber, setPanNumber] = useState("");
+  const [incomeDetails, setIncomeDetails] = useState("");
 
   const questions = [
     "Could you please introduce yourself and tell us what type of loan you're interested in?",
@@ -29,26 +35,26 @@ export default function VideoInteraction() {
     "Could you share details about your current employment and monthly income?",
     "Do you have any existing loans or financial commitments?",
     "How would you describe your credit history?",
-  ]
+  ];
 
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: cameraEnabled,
         audio: micEnabled,
-      })
+      });
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream
+        videoRef.current.srcObject = stream;
       }
 
-      return stream
+      return stream;
     } catch (err) {
-      console.error("Error accessing camera:", err)
-      alert("Please allow access to your camera and microphone to proceed.")
-      return null
+      console.error("Error accessing camera:", err);
+      alert("Please allow access to your camera and microphone to proceed.");
+      return null;
     }
-  }
+  };
 
   const startTranscription = () => {
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -122,34 +128,34 @@ export default function VideoInteraction() {
   };
 
   const toggleCamera = () => {
-    setCameraEnabled(!cameraEnabled)
+    setCameraEnabled(!cameraEnabled);
     if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
+      const stream = videoRef.current.srcObject as MediaStream;
       stream.getVideoTracks().forEach((track) => {
-        track.enabled = !cameraEnabled
-      })
+        track.enabled = !cameraEnabled;
+      });
     }
-  }
+  };
 
   const toggleMic = () => {
-    setMicEnabled(!micEnabled)
+    setMicEnabled(!micEnabled);
     if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
+      const stream = videoRef.current.srcObject as MediaStream;
       stream.getAudioTracks().forEach((track) => {
-        track.enabled = !micEnabled
-      })
+        track.enabled = !micEnabled;
+      });
     }
-  }
+  };
 
   const handleNextQuestion = () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
-      setVideoUrl(null)
-      setTranscript("")
+      setCurrentQuestion(currentQuestion + 1);
+      setVideoUrl(null);
+      setTranscript("");
     } else {
-      setStep(3)
+      setStep(3);
     }
-  }
+  };
 
   const handleFileUpload = async (file: File, documentType: string) => {
     if (!file) {
@@ -172,11 +178,54 @@ export default function VideoInteraction() {
 
       const data = await response.json();
       console.log(`Extracted Text for ${documentType}:`, data.text);
-      alert(`Extracted Text for ${documentType}:\n${data.text}`);
+
+      // Auto-fill fields based on the document type
+      switch (documentType) {
+        case "Aadhaar Card":
+          setAadhaarName(extractName(data.text));
+          setAadhaarNumber(extractAadhaarNumber(data.text));
+          break;
+
+        case "PAN Card":
+          setPanNumber(extractPANNumber(data.text));
+          break;
+
+        case "Income Proof":
+          setIncomeDetails(extractIncomeDetails(data.text));
+          break;
+
+        default:
+          break;
+      }
     } catch (error) {
       console.error("Error:", error);
       alert("An error occurred while processing the image.");
     }
+  };
+
+  // Helper functions for text extraction
+  const extractName = (text: string) => {
+    const nameRegex = /Name\s*:\s*([A-Za-z\s]+)/i;
+    const match = text.match(nameRegex);
+    return match ? match[1].trim() : "";
+  };
+
+  const extractAadhaarNumber = (text: string) => {
+    const aadhaarRegex = /\d{4}\s?\d{4}\s?\d{4}/;
+    const match = text.match(aadhaarRegex);
+    return match ? match[0].trim() : "";
+  };
+
+  const extractPANNumber = (text: string) => {
+    const panRegex = /[A-Z]{5}\d{4}[A-Z]{1}/;
+    const match = text.match(panRegex);
+    return match ? match[0].trim() : "";
+  };
+
+  const extractIncomeDetails = (text: string) => {
+    const incomeRegex = /Income\s*:\s*([\d,]+)/i;
+    const match = text.match(incomeRegex);
+    return match ? match[1].trim() : "";
   };
 
   const renderStep = () => {
@@ -227,7 +276,7 @@ export default function VideoInteraction() {
               <Button onClick={() => setStep(2)}>Start Interview</Button>
             </CardFooter>
           </Card>
-        )
+        );
 
       case 2:
         return (
@@ -398,9 +447,9 @@ export default function VideoInteraction() {
                 variant="outline"
                 disabled={currentQuestion === 0}
                 onClick={() => {
-                  setCurrentQuestion(currentQuestion - 1)
-                  setVideoUrl(null)
-                  setTranscript("")
+                  setCurrentQuestion(currentQuestion - 1);
+                  setVideoUrl(null);
+                  setTranscript("");
                 }}
                 className="gap-2"
               >
@@ -423,7 +472,7 @@ export default function VideoInteraction() {
               </Button>
             </CardFooter>
           </Card>
-        )
+        );
 
       case 3:
         return (
@@ -519,6 +568,49 @@ export default function VideoInteraction() {
                   <li>Documents should be valid and not expired</li>
                 </ul>
               </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name (from Aadhaar)</label>
+                  <input
+                    type="text"
+                    value={aadhaarName}
+                    onChange={(e) => setAadhaarName(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="Name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Aadhaar Number</label>
+                  <input
+                    type="text"
+                    value={aadhaarNumber}
+                    onChange={(e) => setAadhaarNumber(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="Aadhaar Number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">PAN Number</label>
+                  <input
+                    type="text"
+                    value={panNumber}
+                    onChange={(e) => setPanNumber(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="PAN Number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Income Details</label>
+                  <input
+                    type="text"
+                    value={incomeDetails}
+                    onChange={(e) => setIncomeDetails(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="Income Details"
+                  />
+                </div>
+              </div>
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button variant="outline" onClick={() => router.push("/dashboard")}>
@@ -527,18 +619,18 @@ export default function VideoInteraction() {
               <Button onClick={() => setStep(4)}>Continue to Eligibility Check</Button>
             </CardFooter>
           </Card>
-        )
+        );
 
-        case 4:
-          return (
-            <Card className="w-full max-w-4xl">
-              <CardHeader>
-                <CardTitle>Loan Eligibility Results</CardTitle>
-                <CardDescription>
-                  Based on your information and documents, here are your loan eligibility results
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+      case 4:
+        return (
+          <Card className="w-full max-w-4xl">
+            <CardHeader>
+              <CardTitle>Loan Eligibility Results</CardTitle>
+              <CardDescription>
+                Based on your information and documents, here are your loan eligibility results
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-4">
                   <svg
@@ -609,20 +701,20 @@ export default function VideoInteraction() {
                   </li>
                 </ol>
               </div>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={() => router.push("/dashboard")}>
-                  Save & Review Later
-                </Button>
-                <Button onClick={() => router.push("/loan-agreement")}>Proceed to Loan Agreement</Button>
-              </CardFooter>
-            </Card>
-          );
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={() => router.push("/dashboard")}>
+                Save & Review Later
+              </Button>
+              <Button onClick={() => router.push("/loan-agreement")}>Proceed to Loan Agreement</Button>
+            </CardFooter>
+          </Card>
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-primary/10 to-background">
@@ -635,5 +727,5 @@ export default function VideoInteraction() {
 
       <main className="flex-1 container flex items-center justify-center py-8">{renderStep()}</main>
     </div>
-  )
+  );
 }

@@ -1,17 +1,35 @@
 "use client";
 
-import { useState} from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { ArrowRight, FileText, Home, LogOut, User, Video } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast, Toaster } from "sonner";
-
- 
+import {
+  Home,
+  Video,
+  FileText,
+  User,
+  LogOut,
+  Calculator,
+  BarChart,
+  CheckCircle,
+  GitCompare,
+  Calendar,
+  Share,
+  ArrowRightCircle,
+  Circle,
+} from "lucide-react";
+import { LoanCalculator } from "@/components/LoanCalculator";
+import { CreditScoreTracker } from "@/components/CreditScoreTracker";
+import { LoanEligibilityChecker } from "@/components/LoanEligibilityChecker";
+import { LoanComparisonTool } from "@/components/LoanComparisonTool";
+import { DocumentExpiryTracker } from "@/components/DocumentExpiryTracker";
+import { DocumentSharing } from "@/components/DocumentSharing";
+import { RecentTransactions } from "@/components/RecentTransactions";
 
 export default function Dashboard() {
   const searchParams = useSearchParams();
@@ -36,11 +54,8 @@ export default function Dashboard() {
     { name: "Photograph", status: "completed", description: "Recent passport size photograph", icon: "📸" },
   ]);
 
-  // Calculate the number of completed documents
   const completedDocuments = documents.filter((doc) => doc.status === "completed").length;
   const totalDocuments = documents.length;
-
-  // Calculate the progress percentage
   const uploadProgress = (completedDocuments / totalDocuments) * 100;
 
   const handleFileUpload = (index: number) => {
@@ -48,11 +63,10 @@ export default function Dashboard() {
     fileInput.type = "file";
     fileInput.accept = "image/*, application/pdf";
     fileInput.onchange = (e: Event) => {
-      const target = e.target as HTMLInputElement; // Cast e.target to HTMLInputElement
+      const target = e.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
-        const file = target.files[0]; // Access the first file
+        const file = target.files[0];
         if (file) {
-          // Simulate file upload process
           setTimeout(() => {
             const updatedDocuments = [...documents];
             updatedDocuments[index].status = "completed";
@@ -66,8 +80,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-background/95">
-      {/* Header and other components remain unchanged */}
-      {/* ... */}<header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
+      <Toaster />
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container flex h-16 items-center justify-between py-4">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center">
@@ -154,12 +168,61 @@ export default function Dashboard() {
                 <FileText className="mr-2 h-4 w-4" />
                 My Documents
               </Button>
+              <Button
+                variant={activeTab === "loan-calculator" ? "secondary" : "ghost"}
+                className="justify-start"
+                onClick={() => setActiveTab("loan-calculator")}
+              >
+                <Calculator className="mr-2 h-4 w-4" />
+                Loan Calculator
+              </Button>
+              <Button
+                variant={activeTab === "credit-score" ? "secondary" : "ghost"}
+                className="justify-start"
+                onClick={() => setActiveTab("credit-score")}
+              >
+                <BarChart className="mr-2 h-4 w-4" />
+                Credit Score
+              </Button>
+              {/* <Button
+                variant={activeTab === "loan-eligibility" ? "secondary" : "ghost"}
+                className="justify-start"
+                onClick={() => setActiveTab("loan-eligibility")}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Loan Eligibility
+              </Button> */}
+              <Button
+                variant={activeTab === "loan-comparison" ? "secondary" : "ghost"}
+                className="justify-start"
+                onClick={() => setActiveTab("loan-comparison")}
+              >
+                <GitCompare className="mr-2 h-4 w-4" />
+                Loan Comparison
+              </Button>
+              <Button
+                variant={activeTab === "document-expiry" ? "secondary" : "ghost"}
+                className="justify-start"
+                onClick={() => setActiveTab("document-expiry")}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Document Expiry
+              </Button>
+              <Button
+                variant={activeTab === "document-sharing" ? "secondary" : "ghost"}
+                className="justify-start"
+                onClick={() => setActiveTab("document-sharing")}
+              >
+                <Share className="mr-2 h-4 w-4" />
+                Document Sharing
+              </Button>
             </nav>
           </div>
         </aside>
 
         <main className="flex w-full flex-col overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -214,7 +277,7 @@ export default function Dashboard() {
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
                     <CardTitle className="text-sm font-medium">Application Progress</CardTitle>
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <ArrowRight className="h-4 w-4 text-primary" />
+                      <ArrowRightCircle className="h-4 w-4 text-primary" />
                     </div>
                   </CardHeader>
                   <CardContent className="relative">
@@ -242,7 +305,7 @@ export default function Dashboard() {
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
                     <CardTitle className="text-sm font-medium">Next Steps</CardTitle>
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <ArrowRight className="h-4 w-4 text-primary" />
+                      <Circle className="h-4 w-4 text-primary" />
                     </div>
                   </CardHeader>
                   <CardContent className="relative">
@@ -297,6 +360,7 @@ export default function Dashboard() {
               </Card>
             </TabsContent>
 
+            {/* Apply for Loan Tab */}
             <TabsContent value="apply" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Apply for a Loan</h2>
@@ -306,7 +370,7 @@ export default function Dashboard() {
                 <CardHeader className="bg-gradient-to-r from-primary/10 to-purple-500/10">
                   <CardTitle>AI Branch Manager</CardTitle>
                   <CardDescription>
-                    Our LoanSaathial branch manager will guide you through the loan application process
+                    Our LoanSaathi branch manager will guide you through the loan application process
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 p-6">
@@ -422,7 +486,7 @@ export default function Dashboard() {
               </Card>
             </TabsContent>
 
-
+            {/* Documents Tab */}
             <TabsContent value="documents" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Document Submission</h2>
@@ -555,9 +619,40 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Loan Calculator Tab */}
+            <TabsContent value="loan-calculator" className="space-y-6">
+              <LoanCalculator />
+              <LoanEligibilityChecker/>
+            </TabsContent>
+
+            {/* Credit Score Tracker Tab */}
+            <TabsContent value="credit-score" className="space-y-6">
+              <CreditScoreTracker />
+            </TabsContent>
+
+            {/* Loan Eligibility Checker Tab
+            <TabsContent value="loan-eligibility" className="space-y-6">
+              <LoanEligibilityChecker />
+            </TabsContent> */}
+
+            {/* Loan Comparison Tool Tab */}
+            <TabsContent value="loan-comparison" className="space-y-6">
+              <LoanComparisonTool />
+            </TabsContent>
+
+            {/* Document Expiry Tracker Tab */}
+            <TabsContent value="document-expiry" className="space-y-6">
+              <DocumentExpiryTracker />
+            </TabsContent>
+
+            {/* Document Sharing Tab */}
+            <TabsContent value="document-sharing" className="space-y-6">
+              <DocumentSharing />
+            </TabsContent>
           </Tabs>
         </main>
       </div>
     </div>
-          );
+  );
 }
