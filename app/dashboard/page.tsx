@@ -1,24 +1,78 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent } from "@/components/ui/tabs"
-import { ArrowRight, FileText, Home, LogOut, User, Video } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
+import { useState} from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ArrowRight, FileText, Home, LogOut, User, Video } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { toast, Toaster } from "sonner";
+
+ 
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("overview")
+  const searchParams = useSearchParams();
+  const success = searchParams.get("success");
+
+  useEffect(() => {
+    if (success === "loan_agreement_accepted") {
+      toast.success("Loan agreement accepted successfully!");
+    }
+  }, [success]);
+
+  const [activeTab, setActiveTab] = useState("overview");
+  const [user, setUser] = useState({
+    name: "John Doe",
+    email: "john.doe@example.com",
+    initials: "JD",
+  });
+  const [documents, setDocuments] = useState([
+    { name: "Identity Proof (Aadhaar Card)", status: "pending", description: "Front and back of your Aadhaar card", icon: "🪪" },
+    { name: "PAN Card", status: "pending", description: "Clear image of your PAN card", icon: "📇" },
+    { name: "Income Proof", status: "pending", description: "Last 3 months salary slips or bank statements", icon: "💵" },
+    { name: "Photograph", status: "completed", description: "Recent passport size photograph", icon: "📸" },
+  ]);
+
+  // Calculate the number of completed documents
+  const completedDocuments = documents.filter((doc) => doc.status === "completed").length;
+  const totalDocuments = documents.length;
+
+  // Calculate the progress percentage
+  const uploadProgress = (completedDocuments / totalDocuments) * 100;
+
+  const handleFileUpload = (index: number) => {
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*, application/pdf";
+    fileInput.onchange = (e: Event) => {
+      const target = e.target as HTMLInputElement; // Cast e.target to HTMLInputElement
+      if (target.files && target.files.length > 0) {
+        const file = target.files[0]; // Access the first file
+        if (file) {
+          // Simulate file upload process
+          setTimeout(() => {
+            const updatedDocuments = [...documents];
+            updatedDocuments[index].status = "completed";
+            setDocuments(updatedDocuments);
+          }, 2000);
+        }
+      }
+    };
+    fileInput.click();
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-background/95">
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
+      {/* Header and other components remain unchanged */}
+      {/* ... */}<header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container flex h-16 items-center justify-between py-4">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center">
               <div className="bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center mr-2">
-                VB
+                {user.initials}
               </div>
               <h1 className="text-xl font-bold">LoanSaathi</h1>
             </Link>
@@ -67,12 +121,12 @@ export default function Dashboard() {
             <div className="mb-6 flex flex-col items-center justify-center space-y-2 border-b pb-6">
               <div className="relative h-20 w-20 overflow-hidden rounded-full bg-primary/10">
                 <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-primary">
-                  JD
+                  {user.initials}
                 </div>
               </div>
               <div className="space-y-1 text-center">
-                <h2 className="text-lg font-semibold">John Doe</h2>
-                <p className="text-sm text-muted-foreground">john.doe@example.com</p>
+                <h2 className="text-lg font-semibold">{user.name}</h2>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
               </div>
             </div>
             <nav className="flex h-full flex-col space-y-2">
@@ -109,7 +163,7 @@ export default function Dashboard() {
             <TabsContent value="overview" className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight">Welcome back, John</h2>
+                  <h2 className="text-2xl font-bold tracking-tight">Welcome back, {user.name}</h2>
                   <p className="text-muted-foreground">Here's what's happening with your applications</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -196,7 +250,7 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground">
                       Complete your application by uploading required documents
                     </p>
-                    <Button size="sm" className="mt-4 w-full">
+                    <Button size="sm" className="mt-4 w-full" onClick={() => setActiveTab("documents")}>
                       Continue Application
                     </Button>
                   </CardContent>
@@ -368,6 +422,7 @@ export default function Dashboard() {
               </Card>
             </TabsContent>
 
+
             <TabsContent value="documents" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Document Submission</h2>
@@ -382,32 +437,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      {
-                        name: "Identity Proof (Aadhaar Card)",
-                        status: "pending",
-                        description: "Front and back of your Aadhaar card",
-                        icon: "🪪",
-                      },
-                      {
-                        name: "PAN Card",
-                        status: "pending",
-                        description: "Clear image of your PAN card",
-                        icon: "📇",
-                      },
-                      {
-                        name: "Income Proof",
-                        status: "pending",
-                        description: "Last 3 months salary slips or bank statements",
-                        icon: "💵",
-                      },
-                      {
-                        name: "Photograph",
-                        status: "completed",
-                        description: "Recent passport size photograph",
-                        icon: "📸",
-                      },
-                    ].map((doc, i) => (
+                    {documents.map((doc, i) => (
                       <div
                         key={i}
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -444,6 +474,7 @@ export default function Dashboard() {
                               variant="outline"
                               size="sm"
                               className="group-hover:bg-primary group-hover:text-white"
+                              onClick={() => handleFileUpload(i)}
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -479,7 +510,7 @@ export default function Dashboard() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span>Photograph</span>
+                      <span>Verified Documents</span>
                       <span className="text-green-500 flex items-center">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -494,13 +525,13 @@ export default function Dashboard() {
                           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                           <polyline points="22 4 12 14.01 9 11.01"></polyline>
                         </svg>
-                        Verified
+                        {completedDocuments}/{totalDocuments} Verified
                       </span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2.5">
                       <div
                         className="bg-gradient-to-r from-green-500 to-green-600 h-2.5 rounded-full"
-                        style={{ width: "25%" }}
+                        style={{ width: `${uploadProgress}%` }}
                       ></div>
                     </div>
                     <div className="flex justify-between items-center text-xs text-muted-foreground">
@@ -511,8 +542,14 @@ export default function Dashboard() {
                       <span>100%</span>
                     </div>
                     <div className="bg-green-50 border border-green-100 rounded-lg p-4 text-center">
-                      <p className="text-green-800">1/4 documents verified</p>
-                      <p className="text-sm text-green-600">Upload remaining documents to complete your application</p>
+                      <p className="text-green-800">
+                        {completedDocuments}/{totalDocuments} documents verified
+                      </p>
+                      <p className="text-sm text-green-600">
+                        {completedDocuments === totalDocuments
+                          ? "All documents have been verified!"
+                          : "Upload remaining documents to complete your application"}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -522,6 +559,5 @@ export default function Dashboard() {
         </main>
       </div>
     </div>
-  )
+          );
 }
-

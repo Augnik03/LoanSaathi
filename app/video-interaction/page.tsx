@@ -1,24 +1,27 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Camera, Mic, MicOff, Video, VideoOff, FileText, User } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
+import RecordRTC from "recordrtc"
 
 export default function VideoInteraction() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isRecording, setIsRecording] = useState(false)
-  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([])
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [cameraEnabled, setCameraEnabled] = useState(true)
   const [micEnabled, setMicEnabled] = useState(true)
   const [currentQuestion, setCurrentQuestion] = useState(0)
+  const [transcript, setTranscript] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recorderRef = useRef<RecordRTC | null>(null)
+  const recognitionRef = useRef<any>(null)
 
   const questions = [
     "Could you please introduce yourself and tell us what type of loan you're interested in?",
@@ -27,23 +30,6 @@ export default function VideoInteraction() {
     "Do you have any existing loans or financial commitments?",
     "How would you describe your credit history?",
   ]
-
-  useEffect(() => {
-    if (videoUrl && step === 2) {
-      const timer = setTimeout(() => {
-        if (currentQuestion < questions.length - 1) {
-          setCurrentQuestion(currentQuestion + 1)
-          setVideoUrl(null)
-          setRecordedChunks([])
-        } else {
-          // All questions answered, move to next step
-          setStep(3)
-        }
-      }, 3000)
-
-      return () => clearTimeout(timer)
-    }
-  }, [videoUrl, currentQuestion, step])
 
   const startCamera = async () => {
     try {
@@ -59,47 +45,81 @@ export default function VideoInteraction() {
       return stream
     } catch (err) {
       console.error("Error accessing camera:", err)
+      alert("Please allow access to your camera and microphone to proceed.")
       return null
     }
   }
 
-  const startRecording = async () => {
-    const stream = await startCamera()
-    if (!stream) return
+  const startTranscription = () => {
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    setIsRecording(true)
-    const mediaRecorder = new MediaRecorder(stream)
-    mediaRecorderRef.current = mediaRecorder
+    if (!SpeechRecognition) {
+      alert("Your browser does not support speech recognition.");
+      return;
+    }
 
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        setRecordedChunks((prev) => [...prev, event.data])
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interimTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          setTranscript((prev) => prev + transcript + " ");
+        } else {
+          interimTranscript += transcript;
+        }
       }
-    }
+      console.log("Interim Transcript:", interimTranscript);
+    };
 
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordedChunks, {
-        type: "video/webm",
-      })
-      const url = URL.createObjectURL(blob)
-      setVideoUrl(url)
-    }
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
-    mediaRecorder.start()
-  }
+  const startRecording = async () => {
+    const stream = await startCamera();
+    if (!stream) return;
+
+    setIsRecording(true);
+    startTranscription();
+
+    // Initialize RecordRTC
+    recorderRef.current = new RecordRTC(stream, {
+      type: "video", // Record video
+      mimeType: "video/webm", // Use WebM format
+    });
+
+    recorderRef.current.startRecording();
+  };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
+    if (recorderRef.current && isRecording) {
+      recorderRef.current.stopRecording(() => {
+        const blob = recorderRef.current?.getBlob(); // Get the recorded Blob
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          setVideoUrl(url); // Set the video URL for playback
+        }
+        setIsRecording(false);
+        setIsProcessing(false);
 
-      // Stop all tracks of the stream
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream
-        stream.getTracks().forEach((track) => track.stop())
-      }
+        // Stop all tracks of the stream
+        if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach((track) => track.stop());
+        }
+
+        // Stop transcription
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+        }
+      });
     }
-  }
+  };
 
   const toggleCamera = () => {
     setCameraEnabled(!cameraEnabled)
@@ -120,6 +140,44 @@ export default function VideoInteraction() {
       })
     }
   }
+
+  const handleNextQuestion = () => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1)
+      setVideoUrl(null)
+      setTranscript("")
+    } else {
+      setStep(3)
+    }
+  }
+
+  const handleFileUpload = async (file: File, documentType: string) => {
+    if (!file) {
+      alert("Please select a file first.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("http://localhost:5000/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process the image.");
+      }
+
+      const data = await response.json();
+      console.log(`Extracted Text for ${documentType}:`, data.text);
+      alert(`Extracted Text for ${documentType}:\n${data.text}`);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("An error occurred while processing the image.");
+    }
+  };
 
   const renderStep = () => {
     switch (step) {
@@ -243,6 +301,21 @@ export default function VideoInteraction() {
                 </div>
               </div>
 
+              <div className="mt-6">
+                {videoUrl ? (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Your Recorded Response</h3>
+                    <video src={videoUrl} controls className="w-full rounded-lg" />
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="text-sm font-medium mb-2">Transcript</h4>
+                      <p className="text-sm text-gray-700">{transcript}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No video recorded yet.</p>
+                )}
+              </div>
+
               <div className="flex justify-center">
                 <div className="w-full max-w-md">
                   <div className="flex items-center gap-2 mb-2">
@@ -294,11 +367,9 @@ export default function VideoInteraction() {
                       <polyline points="22 4 12 14.01 9 11.01"></polyline>
                     </svg>
                     <p className="text-green-800 font-medium mb-1">Response recorded</p>
-                    {currentQuestion < questions.length - 1 ? (
-                      <p className="text-sm text-green-600">Next question loading...</p>
-                    ) : (
-                      <p className="text-sm text-green-600">Processing your responses...</p>
-                    )}
+                    <Button onClick={handleNextQuestion} className="mt-2">
+                      Next Question
+                    </Button>
                   </div>
                 )}
               </div>
@@ -329,7 +400,7 @@ export default function VideoInteraction() {
                 onClick={() => {
                   setCurrentQuestion(currentQuestion - 1)
                   setVideoUrl(null)
-                  setRecordedChunks([])
+                  setTranscript("")
                 }}
                 className="gap-2"
               >
@@ -374,7 +445,18 @@ export default function VideoInteraction() {
                     <div>
                       <p className="font-medium">Identity Proof (Aadhaar Card)</p>
                       <p className="text-sm text-muted-foreground">Front and back of your Aadhaar card</p>
-                      <Button size="sm" variant="outline" className="mt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="aadhaar-upload"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleFileUpload(e.target.files[0], "Aadhaar Card");
+                          }
+                        }}
+                      />
+                      <Button size="sm" variant="outline" className="mt-2" onClick={() => document.getElementById("aadhaar-upload")?.click()}>
                         Upload
                       </Button>
                     </div>
@@ -386,7 +468,18 @@ export default function VideoInteraction() {
                     <div>
                       <p className="font-medium">PAN Card</p>
                       <p className="text-sm text-muted-foreground">Clear image of your PAN card</p>
-                      <Button size="sm" variant="outline" className="mt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="pan-upload"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleFileUpload(e.target.files[0], "PAN Card");
+                          }
+                        }}
+                      />
+                      <Button size="sm" variant="outline" className="mt-2" onClick={() => document.getElementById("pan-upload")?.click()}>
                         Upload
                       </Button>
                     </div>
@@ -398,7 +491,18 @@ export default function VideoInteraction() {
                     <div>
                       <p className="font-medium">Income Proof</p>
                       <p className="text-sm text-muted-foreground">Last 3 months salary slips or bank statements</p>
-                      <Button size="sm" variant="outline" className="mt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="income-upload"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleFileUpload(e.target.files[0], "Income Proof");
+                          }
+                        }}
+                      />
+                      <Button size="sm" variant="outline" className="mt-2" onClick={() => document.getElementById("income-upload")?.click()}>
                         Upload
                       </Button>
                     </div>
@@ -425,16 +529,16 @@ export default function VideoInteraction() {
           </Card>
         )
 
-      case 4:
-        return (
-          <Card className="w-full max-w-4xl">
-            <CardHeader>
-              <CardTitle>Loan Eligibility Results</CardTitle>
-              <CardDescription>
-                Based on your information and documents, here are your loan eligibility results
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+        case 4:
+          return (
+            <Card className="w-full max-w-4xl">
+              <CardHeader>
+                <CardTitle>Loan Eligibility Results</CardTitle>
+                <CardDescription>
+                  Based on your information and documents, here are your loan eligibility results
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
               <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-4">
                   <svg
@@ -505,15 +609,15 @@ export default function VideoInteraction() {
                   </li>
                 </ol>
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => router.push("/dashboard")}>
-                Save & Review Later
-              </Button>
-              <Button onClick={() => router.push("/dashboard")}>Proceed to Loan Agreement</Button>
-            </CardFooter>
-          </Card>
-        )
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={() => router.push("/dashboard")}>
+                  Save & Review Later
+                </Button>
+                <Button onClick={() => router.push("/loan-agreement")}>Proceed to Loan Agreement</Button>
+              </CardFooter>
+            </Card>
+          );
 
       default:
         return null
@@ -533,4 +637,3 @@ export default function VideoInteraction() {
     </div>
   )
 }
-

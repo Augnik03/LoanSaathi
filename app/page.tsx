@@ -1,23 +1,24 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ArrowRight, CheckCircle2, ChevronRight } from "lucide-react"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, CheckCircle2, ChevronRight } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-hidden">
+      {/* Header */}
       <header className="bg-gradient-to-r from-primary to-purple-600 py-4 sticky top-0 z-50">
-        <div className="container flex items-center justify-between">
+        <div className="container px-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary-foreground flex items-center">
-            <span className="bg-white text-primary rounded-full w-8 h-8 flex items-center justify-center mr-2">VB</span>
+            <span className="bg-white text-primary rounded-full w-8 h-8 flex items-center justify-center mr-2">LS</span>
             LoanSaathi
           </h1>
           <div className="flex gap-4">
             <Link href="/login">
               <Button
                 variant="outline"
-                className="text-primary-foreground border-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                className="text-primary border-primary-foreground hover:bg-primary-foreground hover:text-primary"
               >
                 Login
               </Button>
@@ -29,10 +30,12 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="flex-1">
-        <section className="py-20 bg-gradient-to-b from-primary/10 to-background overflow-hidden relative">
-          <div className="absolute inset-0 bg-grid-white/10 bg-grid-pattern "></div>
-          <div className="container flex flex-col md:flex-row items-center gap-12 relative z-10 ml-32">
+        {/* Hero Section */}
+        <section className="py-20 bg-gradient-to-b from-primary/10 to-background relative">
+          <div className="absolute inset-0 bg-grid-white/10 bg-grid-pattern"></div>
+          <div className="container px-4 flex flex-col md:flex-row items-center gap-12 relative z-10">
             <div className="flex-1 space-y-6">
               <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80 mb-4">
                 New Feature: Multi-language Support
@@ -107,7 +110,8 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20 container ml-32">
+        {/* How It Works Section */}
+        <section className="py-20 container px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">How It Works</h2>
             <p className="text-muted-foreground">
@@ -160,8 +164,9 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-16 bg-muted/30 ml-32">
-          <div className="container">
+        {/* Key Features Section */}
+        <section className="py-16 bg-muted/30">
+          <div className="container px-4">
             <h2 className="text-3xl font-bold text-center mb-12">Key Features</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
@@ -202,7 +207,8 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-20 container ml-32">
+        {/* Testimonials Section */}
+        <section className="py-20 container px-4">
           <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-2xl p-8 md:p-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
               <div>
@@ -268,8 +274,9 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Call to Action Section */}
         <section className="py-16 bg-primary text-primary-foreground">
-          <div className="container text-center ml-32">
+          <div className="container px-4 text-center">
             <h2 className="text-3xl font-bold mb-6">Ready to Get Started?</h2>
             <p className="text-xl mb-8 max-w-2xl mx-auto">
               Join thousands of customers who have simplified their loan application process with LoanSaathi
@@ -283,8 +290,9 @@ export default function Home() {
         </section>
       </main>
 
+      {/* Footer */}
       <footer className="bg-gray-900 text-gray-100 py-12">
-        <div className="container ml-32">
+        <div className="container px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-xl font-bold mb-4 flex items-center">
@@ -442,6 +450,5 @@ export default function Home() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
-
